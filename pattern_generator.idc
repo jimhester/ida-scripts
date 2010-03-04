@@ -1,0 +1,1 @@
+#include <idc.idc>static main(void){    auto start    Warning("Address: %x",ScreenEA());Warning("Address: %x",PrevHead(0x00506ddd,0x00505000)); // search previousWarning("Address: %x",NextHead(0x00506ddd,0x00505000)); // search previousWarning("Address: %d",ItemSize(0x00506ddd));Warning("Address: %d",GetOpType(0x00506dd5,1));
