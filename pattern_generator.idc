@@ -126,9 +126,10 @@ static main(void){
         pattern_generator(start,szFilePath,1);
     }
     else{
-        auto directory,openFilename,line,fileHandle;
-        directory = AskStr(".\\", "Please enter a location to dump the files");
-        openFilename = AskFile(0,"*.*", "File with addresses to genereate patterns for");
+        auto directory,openFilename,line,fileHandle,outHandle;
+        directory = AskStr("C:\", "Please enter a location to dump the files");
+        openFilename = AskFile(0,"*.*", "File with addresses to generate patterns for");
+        outHandle = fopen(directory + "\\filenames.txt","w");
         fileHandle = fopen(openFilename, "r");
         line = readstr(fileHandle);
         while(line != -1){
@@ -137,9 +138,12 @@ static main(void){
             addressName = substr(line,0,spaceLoc);
             address = xtol(substr(line,spaceLoc+1,strlen(line)));
             Message("Finding Addresses for %s, at %x\n",addressName, address);
+            fprintf(outHandle, "%s\n", directory + "\\" + addressName + "_patterns.txt");
             pattern_generator(address, directory + "\\" + addressName + "_patterns.txt",0);
             line=readstr(fileHandle);
         }
+        fclose(outHandle);
+        fclose(openFilename);
     }
 }
 
