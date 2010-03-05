@@ -1,16 +1,38 @@
 #include <idc.idc>
 
+static countSpaces(testString)
+{
+    auto location;
+    auto currentString;
+    auto count;
+    count = 0;
+    location = strstr(testString," ");
+    currentString = testString;
+    while(location != -1){
+        count++;
+        currentString = substr(currentString, location+1,-1);
+        location = strstr(currentString," ");
+    }
+    return(count);
+}
+
 static getSearchString(start)
 {
     auto end;
     auto i;
     auto hasMemoryLoc;
     auto searchString;
+    auto firstOpType, secondOpType,firstOpStr,secondOpStr;
+    
     
     hasMemoryLoc = 0;
     end = ItemSize(start);
     
-    if(GetOpType(start,0) == 2 || GetOpType(start,1) == 2){
+    firstOpType = GetOpType(start,0);
+    firstOpStr = GetOpnd(start,0);
+    secondOpType = GetOpType(start,1);
+    secondOpStr = GetOpnd(start,1);
+    if(firstOpType == 2 || strstr(firstOpStr,"offset") != -1 || secondOpType == 2 || strstr(secondOpStr,"offset") != -1){
         hasMemoryLoc = 1;
     }
     if(hasMemoryLoc){
@@ -42,14 +64,17 @@ static getOccurances(search)
 
 static getSmallestSearchString(start)
 {
-    auto forward,reverse,search,itr;
+    auto forward,reverse,revString,search,itr,value;
     itr = 0;
     forward = NextHead(start,start+100);
     reverse = PrevHead(start,start-100);
     search = getSearchString(start);
+    value = strlen(search)-7;
     while(getOccurances(search) == BADADDR && itr < 20){
         if(itr % 2 == 0){
-            search = getSearchString(reverse) + " " + search;
+            revString = getSearchString(reverse);
+            search = revString + " " + search;
+            value = value + strlen(revString)+1;
             reverse = PrevHead(reverse, reverse-100);
         }
         else{
@@ -58,14 +83,19 @@ static getSmallestSearchString(start)
         }
         itr = itr + 1;
     }
-    return(search);
+    return(form("%s\t%d",search,countSpaces(substr(search,0,value))));
 }
-static main(void){
-    auto start,searchString,arrayId,currXRef,arrayIndex,stringLength,szFilePath,hFile,itr;
-    szFilePath = AskFile(1, "*.txt", "Select output dump file:");
-    hFile = fopen(szFilePath, "wb");
-    start = ScreenEA();
+static pattern_generator(start,filename,showFile){
+    auto checkStart,searchString,arrayId,currXRef,arrayIndex,stringLength,hFile,itr;
+    hFile = fopen(filename, "wb");
     currXRef = DfirstB(start);
+    if(currXRef == -1){
+        start = start+4;
+        currXRef = DfirstB(start);
+        if(currXRef == -1){
+            return(-1);
+        }
+    }
     searchString = getSmallestSearchString(currXRef);
     fprintf(hFile,"%s\r\n", searchString);
     currXRef = DnextB(start,currXRef);
@@ -73,13 +103,44 @@ static main(void){
     itr = 2;
     while(currXRef != -1){
         Message(",%d", itr);
+        if(itr % 50 == 0){
+            Message("\n");
+        }
         searchString = getSmallestSearchString(currXRef);
         fprintf(hFile,"%s\r\n", searchString);
         currXRef = DnextB(start,currXRef);
         itr=itr+1;
     }
+    Message("\n");
     fclose(hFile);
-    Exec("start notepad " + szFilePath);
+    if(showFile){
+        Exec("start notepad " + filename);
+    }
+}
+
+static main(void){
+    if(AskYN(1,"Do you want to search for patterns at the cursor location?")){
+        auto start,szFilePath;
+        start = ScreenEA();
+        szFilePath = AskFile(1, "*.txt", "Select output dump file:");
+        pattern_generator(start,szFilePath,1);
+    }
+    else{
+        auto directory,openFilename,line,fileHandle;
+        directory = AskStr(".\\", "Please enter a location to dump the files");
+        openFilename = AskFile(0,"*.*", "File with addresses to genereate patterns for");
+        fileHandle = fopen(openFilename, "r");
+        line = readstr(fileHandle);
+        while(line != -1){
+            auto addressName, address,spaceLoc;
+            spaceLoc = strstr(line," ");
+            addressName = substr(line,0,spaceLoc);
+            address = xtol(substr(line,spaceLoc+1,strlen(line)));
+            Message("Finding Addresses for %s, at %x\n",addressName, address);
+            pattern_generator(address, directory + "\\" + addressName + "_patterns.txt",0);
+            line=readstr(fileHandle);
+        }
+    }
 }
 
     //for(i = ScreenEA();
