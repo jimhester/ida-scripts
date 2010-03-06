@@ -83,10 +83,12 @@ static getSmallestSearchString(start)
         }
         itr = itr + 1;
     }
-    return(form("%s\t%d",search,countSpaces(substr(search,0,value))));
+    return(form("%s\;%d",search,countSpaces(substr(search,0,value))));
 }
 static pattern_generator(start,filename,showFile){
-    auto checkStart,searchString,arrayId,currXRef,arrayIndex,stringLength,hFile,itr;
+    auto checkStart,searchString,arrayId,currXRef,arrayIndex,stringLength,hFile,itr,shiftAmount,xrefCutoff;
+    xrefCutoff = 100; // make this higher if you want more xrefs
+    shiftAmount = 0;
     hFile = fopen(filename, "wb");
     currXRef = DfirstB(start);
     if(currXRef == -1){
@@ -95,19 +97,20 @@ static pattern_generator(start,filename,showFile){
         if(currXRef == -1){
             return(-1);
         }
+        shiftAmount = -4;
     }
     searchString = getSmallestSearchString(currXRef);
-    fprintf(hFile,"%s\r\n", searchString);
+    fprintf(hFile,"%s;%d\r\n", searchString,shiftAmount);
     currXRef = DnextB(start,currXRef);
     Message("%d",1);
     itr = 2;
-    while(currXRef != -1){
+    while(currXRef != -1 && itr <= xrefCutoff){
         Message(",%d", itr);
         if(itr % 50 == 0){
             Message("\n");
         }
         searchString = getSmallestSearchString(currXRef);
-        fprintf(hFile,"%s\r\n", searchString);
+        fprintf(hFile,"%s\;%d\r\n", searchString,shiftAmount);
         currXRef = DnextB(start,currXRef);
         itr=itr+1;
     }
@@ -127,12 +130,12 @@ static main(void){
     }
     else{
         auto directory,openFilename,line,fileHandle,outHandle;
-        directory = AskStr("C:\", "Please enter a location to dump the files");
+        directory = AskStr("C:\\", "Please enter a location to dump the files");
         openFilename = AskFile(0,"*.*", "File with addresses to generate patterns for");
         outHandle = fopen(directory + "\\filenames.txt","w");
         fileHandle = fopen(openFilename, "r");
         line = readstr(fileHandle);
-        while(line != -1){
+        while(line != -1 ){
             auto addressName, address,spaceLoc;
             spaceLoc = strstr(line," ");
             addressName = substr(line,0,spaceLoc);
