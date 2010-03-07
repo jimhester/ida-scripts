@@ -18,31 +18,39 @@ static countSpaces(testString)
 
 static getSearchString(start)
 {
-    auto end;
-    auto i;
-    auto hasMemoryLoc;
-    auto searchString;
+    auto end,i,startItr,hasMemoryLoc,searchString;
     auto firstOpType, secondOpType,firstOpStr,secondOpStr;
     
     
     hasMemoryLoc = 0;
     end = ItemSize(start);
+    startItr = 1;
     
     firstOpType = GetOpType(start,0);
     firstOpStr = GetOpnd(start,0);
     secondOpType = GetOpType(start,1);
     secondOpStr = GetOpnd(start,1);
-    if(firstOpType == 2 || strstr(firstOpStr,"offset") != -1 || secondOpType == 2 || strstr(secondOpStr,"offset") != -1){
+    searchString = form("%02x",Byte(start));
+    if(firstOpType == 2 || strstr(firstOpStr,"offset") != -1){
         hasMemoryLoc = 1;
     }
-    if(hasMemoryLoc){
-        end = end - 4;
+    else{
+        if(secondOpType == 2 || strstr(secondOpStr,"offset") != -1){
+            hasMemoryLoc = 2;
+        }
     }
-    searchString = form("%02x",Byte(start));
-    for(i = 1;i < end;i++){
+    if(hasMemoryLoc == 1){
+        startItr = 5;
+        searchString = searchString + " ? ? ? ?";
+    }
+    if(hasMemoryLoc == 2){
+        end = end -4;
+    }
+    
+    for(i = startItr;i < end;i++){
         searchString = searchString + " " + form("%02x",Byte(start+i));
     }
-    if(hasMemoryLoc){
+    if(hasMemoryLoc == 2){
         searchString = searchString + " ? ? ? ?";
     }
     return(searchString);
@@ -140,7 +148,7 @@ static main(void){
             spaceLoc = strstr(line," ");
             addressName = substr(line,0,spaceLoc);
             address = xtol(substr(line,spaceLoc+1,strlen(line)));
-            Message("Finding Addresses for %s, at %x\n",addressName, address);
+            Message("Finding Patterns for for %s, at %x\n",addressName, address);
             fprintf(outHandle, "%s\n", directory + "\\" + addressName + "_patterns.txt");
             pattern_generator(address, directory + "\\" + addressName + "_patterns.txt",0);
             line=readstr(fileHandle);

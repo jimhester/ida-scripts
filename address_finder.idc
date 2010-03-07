@@ -32,7 +32,6 @@ static getAddressFromSearchString(sstring){
 }
 static getAddressFromFile(file){
     auto fileHandle,line;
-    Message("%s:\n", file);
     fileHandle = fopen(file,"r");
     line = readstr(fileHandle);
     while(line != -1){
@@ -40,11 +39,13 @@ static getAddressFromFile(file){
         location = getAddressFromSearchString(substr(line,0,strlen(line)));
         if(location != -1){
             fclose(fileHandle);
+            Message("%s: 0x%08x\n", file,location);
             return(location);
         }
         line = readstr(fileHandle);
     }
     fclose(fileHandle);
+    Message("%s: 0x%08x\n", file,location);
     return(-1);
 }
 static findLastOccuranceOf(string,stringToFind)
@@ -75,16 +76,16 @@ static main(){
             outHandle = fopen(outFilename,"w");
             md5Hash = GetInputMD5();
             fprintf(outHandle,"md5 %s\n", md5Hash);
-            if(GetShortPrm(INF_FILETYPE) == FT_PE){ // windows get pe timestamp
-                auto current,fhandle,PEoffset,TimeStamp;
+            if(GetShortPrm(INF_FILETYPE) == FT_PE){ // windows get pe pe_timestamp
+                auto current,exeHandle,pe_offset,pe_timestamp;
                 current = GetInputFilePath();
-                fhandle = fopen(current, "rb");
-                fseek(fhandle, 0x3c, 0);
-                PEoffset = readlong(fhandle, 0);
-                fseek(fhandle, PEoffset + 0x8, 0);
-                TimeStamp = readlong(fhandle, 0);
-                Message("%x %x", PEoffset, TimeStamp);
-                fclose(fhandle);
+                exeHandle = fopen(current, "rb");
+                fseek(exeHandle, 0x3c, 0);
+                pe_offset = readlong(exeHandle, 0);
+                fseek(exeHandle, pe_offset + 0x8, 0);
+                pe_timestamp = readlong(exeHandle, 0);
+                fprintf(outHandle,"pe_timestamp %x\n", pe_timestamp);
+                fclose(exeHandle);
             }
             line = readstr(fileHandle);
             while(line != -1 ){
