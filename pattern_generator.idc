@@ -93,13 +93,13 @@ static getSmallestSearchString(start)
     }
     return(form("%s\;%d",search,countSpaces(substr(search,0,value))));
 }
-static pattern_generator(start,filename,showFile){
+static pattern_generator(start,filename,showFile,isVector){
     auto checkStart,searchString,arrayId,currXRef,arrayIndex,stringLength,hFile,itr,shiftAmount,xrefCutoff;
     xrefCutoff = 100; // make this higher if you want more xrefs
     shiftAmount = 0;
     hFile = fopen(filename, "wb");
     currXRef = DfirstB(start);
-    if(currXRef == -1){
+    if(GetShortPrm(INF_FILETYPE) == FT_PE && (isVector || currXRef == -1)){
         start = start+4;
         currXRef = DfirstB(start);
         if(currXRef == -1){
@@ -134,7 +134,7 @@ static main(void){
         auto start,szFilePath;
         start = ScreenEA();
         szFilePath = AskFile(1, "*.txt", "Select output dump file:");
-        pattern_generator(start,szFilePath,1);
+        pattern_generator(start,szFilePath,1,AskYN(1,"Is the address a vector?"));
     }
     else{
         auto directory,openFilename,line,fileHandle,outHandle;
@@ -144,14 +144,22 @@ static main(void){
         fileHandle = fopen(openFilename, "r");
         line = readstr(fileHandle);
         while(line != -1 ){
-            auto addressName, address,spaceLoc;
+            auto addressName, address,spaceLoc,isVector;
+            isVector = 0;
+            if(strstr(line,"\*") != -1){
+                Message("vector\n");
+                line = substr(line,1,-1);
+                isVector = 1;
+            }
             spaceLoc = strstr(line," ");
             addressName = substr(line,0,spaceLoc);
             address = xtol(substr(line,spaceLoc+1,strlen(line)));
-            Message("Finding Patterns for for %s, at %x\n",addressName, address);
-            fprintf(outHandle, "%s\n", directory + "\\" + addressName + "_patterns.txt");
-            pattern_generator(address, directory + "\\" + addressName + "_patterns.txt",0);
-            line=readstr(fileHandle);
+            if(addressName != "md5" && addressName != "pe_timestamp"){
+                Message("Finding Patterns for for %s, at %x\n",addressName, address);
+                fprintf(outHandle, "%s\n", directory + "\\" + addressName + "_patterns.txt");
+                pattern_generator(address, directory + "\\" + addressName + "_patterns.txt",0,isVector);
+                line=readstr(fileHandle);
+            }
         }
         fclose(outHandle);
         fclose(openFilename);

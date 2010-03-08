@@ -50,7 +50,7 @@ if($rebaseCounts{$rebaseAmount} > 10){
 
 printf("<HexValue name=\"pe_timestamp\">0x%08x</HexValue>\n",$pe_timestamp2);
 print "<String name=\"md5\">$MD52</String>\n";
-for my $address(keys %file2){
+for my $address(sort { if($a eq "md5" || $a eq "pe_timestamp"){ return -1; } return $a cmp $b; }keys %file2){
     if(not $rebased or ($rebased and $file2{$address}-$file1{$address} != $rebaseAmount)){
         printf("<Address name=\"$address\">0x%08x</Address>\n",$file2{$address});
     }
