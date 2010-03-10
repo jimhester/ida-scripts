@@ -15,6 +15,19 @@ static countSpaces(testString)
     }
     return(count);
 }
+static getVarSize(opString)
+{
+    if(strstr(opString,"byte")){
+        return(1);
+    }
+    if(strstr(opString,"word")){
+        return(2);
+    }
+    if(strstr(opString,"dword")){
+        return(4);
+    }
+    return(-1);
+}
 
 static getSearchString(start)
 {
@@ -34,25 +47,35 @@ static getSearchString(start)
     if(firstOpType == 2 || strstr(firstOpStr,"offset") != -1){
         hasMemoryLoc = 1;
     }
-    else{
-        if(secondOpType == 2 || strstr(secondOpStr,"offset") != -1){
-            hasMemoryLoc = 2;
-        }
+    if(secondOpType == 2 || strstr(secondOpStr,"offset") != -1){
+         hasMemoryLoc = 2;
     }
+    
     if(hasMemoryLoc == 1){
-        startItr = 5;
+        if(secondOpType == 1){
+            startItr = end;
+            for(i = 1; i < end-4;i++){
+                searchString = searchString + " " + form("%02x",Byte(start+i));
+            }
+        }
+        else{
+            startItr = end-4;
+            for(i = 1; i < startItr-4;i++){
+                searchString = searchString + " " + form("%02x",Byte(start+i));
+            }
+        }
         searchString = searchString + " ? ? ? ?";
     }
     if(hasMemoryLoc == 2){
         end = end -4;
     }
-    
     for(i = startItr;i < end;i++){
         searchString = searchString + " " + form("%02x",Byte(start+i));
     }
     if(hasMemoryLoc == 2){
         searchString = searchString + " ? ? ? ?";
     }
+    //Message("%d %d %s\n", startItr, end,searchString);
     return(searchString);
 }
 
@@ -60,6 +83,9 @@ static getOccurances(search)
 {
     auto location,location2;
     location = FindBinary(0,SEARCH_DOWN, search);
+    if(location == BADADDR){
+        return(-1);
+    }
     //Message("%x\n", location);
     location2 = FindBinary(location+1,SEARCH_DOWN,search);
     //Message("%x\n", location2);
@@ -67,18 +93,19 @@ static getOccurances(search)
     //    Message("Only Occurance\n");
         return(location);
     }
-    return(BADADDR);
+    return(-2);
 }
 
 static getSmallestSearchString(start)
 {
-    auto forward,reverse,revString,search,itr,value;
+    auto forward,reverse,revString,search,itr,value,searchOccurances;
     itr = 0;
     forward = NextHead(start,start+100);
     reverse = PrevHead(start,start-100);
     search = getSearchString(start);
-    value = strlen(search)-7;
-    while(getOccurances(search) == BADADDR && itr < 20){
+    value = strstr(search,"?");
+    searchOccurances = getOccurances(search);
+    while(searchOccurances == -2 && itr < 20){
         if(itr % 2 == 0){
             revString = getSearchString(reverse);
             search = revString + " " + search;
@@ -89,7 +116,12 @@ static getSmallestSearchString(start)
             search = search + " " + getSearchString(forward);
             forward = NextHead(forward, forward + 100);
         }
+        searchOccurances = getOccurances(search);
         itr = itr + 1;
+    }
+    if(searchOccurances == -1){
+        Message("Search string %s not found, something is wrong\n",search);
+        return("");
     }
     return(form("%s\;%d",search,countSpaces(substr(search,0,value))));
 }
