@@ -4,7 +4,7 @@ use warnings;
 use strict;
 
 my (%file1,%file2) = () x 2;
-my ($MD51, $MD52, $pe_timestamp1, $pe_timestamp2) = (0) x 4;
+my ($MD51, $MD52, $pe_timestamp1, $pe_timestamp2);
 
 my ($file1, $file2) = @ARGV;
 open FILE1, $file1 or die $!;
@@ -44,13 +44,21 @@ for my $address (keys %file2){
 my $rebaseAmount = (sort {$b <=> $a} keys %rebaseCounts)[0];
 my $rebased = undef;
 if($rebaseCounts{$rebaseAmount} > 10){
-    printf("rebase=\"0x%x\">\n", $rebaseAmount);
+    if($rebaseAmount < 0){
+        my $tempRebase = $rebaseAmount * -1;
+        printf("rebase=\"-0x%x\">\n", $tempRebase);
+    }
+    else{
+        printf("rebase=\"0x%x\">\n", $rebaseAmount);
+    }
     $rebased=1;
 }
 
-printf("<HexValue name=\"pe_timestamp\">0x%08x</HexValue>\n",$pe_timestamp2);
-print "<String name=\"md5\">$MD52</String>\n";
-for my $address(sort { if($a eq "md5" || $a eq "pe_timestamp"){ return -1; } return $a cmp $b; }keys %file2){
+if(defined $pe_timestamp2){
+    printf("<HexValue name=\"pe_timestamp\">0x%08x</HexValue>\n",$pe_timestamp2);
+}
+print "<String name=\"md5\">\L$MD52\E</String>\n";
+for my $address(sort keys %file2){
     if(not $rebased or ($rebased and $file2{$address}-$file1{$address} != $rebaseAmount)){
         printf("<Address name=\"$address\">0x%08x</Address>\n",$file2{$address});
     }
