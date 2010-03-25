@@ -34,7 +34,7 @@ sub entry{
     $updateElement=$element;
     my $currentAddress = getCurrentAddress($field);
     if($currentAddress){
-          printf(STDERR "$updateElement %s 0x%x\n", $field->atts->{'id'}, $currentAddress);
+          printf(STDERR "$updateElement %s 0x%08x\n", $field->atts->{'id'}, $currentAddress);
     }
     if(not exists $updates{$updateElement}{$field->atts->{'id'}}){
       return;
@@ -42,15 +42,15 @@ sub entry{
     if(not $currentAddress or $currentAddress != $updates{$updateElement}{$field->atts->{'id'}}){
       my $currentAddressElm = $field->first_child(\&correctAddress);
       if(defined $currentAddressElm){
-	printf(STDERR "Changing $updateElement %s to 0x%x\n", $field->atts->{'id'},$updates{$updateElement}{$field->atts->{'id'}});
-	$currentAddressElm->set_text(sprintf("0x%x",$updates{$updateElement}{$field->atts->{'id'}}));
+	printf(STDERR "Changing $updateElement %s to 0x%08x\n", $field->atts->{'id'},$updates{$updateElement}{$field->atts->{'id'}});
+	$currentAddressElm->set_text(sprintf("0x%08x",$updates{$updateElement}{$field->atts->{'id'}}));
       }
       else{
 	my $added;
-	my $elt= XML::Twig::Elt->new(Address => { name => $updateElement },sprintf("0x%x",$updates{$updateElement}{$field->atts->{'id'}}));
+	my $elt= XML::Twig::Elt->new(Address => { name => $updateElement },sprintf("0x%08x",$updates{$updateElement}{$field->atts->{'id'}}));
 	for my $child($field->children){
 	  if($child->atts->{'name'} !~ /pe_timestamp|md5/ and ($child->atts->{'name'} cmp $updateElement) >0){
-	    printf(STDERR "Adding $updateElement 0x%x to %s\n", $updates{$updateElement}{$field->atts->{'id'}},$field->atts->{'id'});
+	    printf(STDERR "Adding $updateElement 0x%08x to %s\n", $updates{$updateElement}{$field->atts->{'id'}},$field->atts->{'id'});
 	    $elt->paste('before', $child);
 	    $added = 1;
 	    last;
