@@ -166,7 +166,12 @@ static main(void){
         auto start,szFilePath;
         start = ScreenEA();
         szFilePath = AskFile(1, "*.txt", "Select output dump file:");
-        pattern_generator(start,szFilePath,1,AskYN(1,"Is the address a vector?"));
+        if(GetShortPrm(INF_FILETYPE) == FT_PE){ # only have to treat vectors different in windows
+            pattern_generator(start,szFilePath,1,AskYN(1,"Is the address a vector?"));
+        }
+        else{
+            pattern_generator(start,szFilePath,1,0);
+        }
     }
     else{
         auto directory,openFilename,line,fileHandle,outHandle;

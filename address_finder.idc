@@ -61,6 +61,36 @@ static findLastOccuranceOf(string,stringToFind)
     }
     return(prevLocation-1);
 }
+static processFile(openFilename,outFilename,writeMode){
+    auto directory,line,fileHandle,outHandle,md5Hash;
+    fileHandle = fopen(openFilename, "r");
+    outHandle = fopen(outFilename,writeMode);
+    md5Hash = GetInputMD5();
+    fprintf(outHandle,"md5 %s\n", md5Hash);
+    if(GetShortPrm(INF_FILETYPE) == FT_PE){ // windows get pe pe_timestamp
+        auto current,exeHandle,pe_offset,pe_timestamp;
+        current = GetInputFilePath();
+        exeHandle = fopen(current, "rb");
+        fseek(exeHandle, 0x3c, 0);
+        pe_offset = readlong(exeHandle, 0);
+        fseek(exeHandle, pe_offset + 0x8, 0);
+        pe_timestamp = readlong(exeHandle, 0);
+        fprintf(outHandle,"pe_timestamp %x\n", pe_timestamp);
+        fclose(exeHandle);
+    }
+    line = readstr(fileHandle);
+    while(line != -1 ){
+        auto beginName,endName,name,address;
+        beginName = findLastOccuranceOf(line,"\\");
+        endName = strstr(line, "_patterns");
+        name = substr(line,beginName,endName);
+        address = getAddressFromFile(substr(line,0,strlen(line)-1));
+        fprintf(outHandle,"%s 0x%08x\n", name,address);
+        line=readstr(fileHandle);
+    }
+    fclose(fileHandle);
+    fclose(outHandle);
+}
 static main(){
     if(AskYN(1,"Do you want to search for an address with patterns in a single file?")){
         auto filename;
@@ -69,36 +99,10 @@ static main(){
     }
     else{
         if(AskYN(1,"Do you want to search for all patterns in paths given by a file?")){
-            auto directory,line,openFilename,fileHandle,outHandle,outFilename,md5Hash;
+            auto openFilename, outFilename;
             openFilename = AskFile(0,"*.*", "File with pathnames for address files");
-            fileHandle = fopen(openFilename, "r");
             outFilename = AskFile(1,"*.*", "Filename to save the addresses");
-            outHandle = fopen(outFilename,"w");
-            md5Hash = GetInputMD5();
-            fprintf(outHandle,"md5 %s\n", md5Hash);
-            if(GetShortPrm(INF_FILETYPE) == FT_PE){ // windows get pe pe_timestamp
-                auto current,exeHandle,pe_offset,pe_timestamp;
-                current = GetInputFilePath();
-                exeHandle = fopen(current, "rb");
-                fseek(exeHandle, 0x3c, 0);
-                pe_offset = readlong(exeHandle, 0);
-                fseek(exeHandle, pe_offset + 0x8, 0);
-                pe_timestamp = readlong(exeHandle, 0);
-                fprintf(outHandle,"pe_timestamp %x\n", pe_timestamp);
-                fclose(exeHandle);
-            }
-            line = readstr(fileHandle);
-            while(line != -1 ){
-                auto beginName,endName,name,address;
-                beginName = findLastOccuranceOf(line,"\\");
-                endName = strstr(line, "_patterns");
-                name = substr(line,beginName,endName);
-                address = getAddressFromFile(substr(line,0,strlen(line)-1));
-                fprintf(outHandle,"%s 0x%08x\n", name,address);
-                line=readstr(fileHandle);
-            }
-            fclose(fileHandle);
-            fclose(outHandle);
+            processFile(openFilename, outFilename, "w");
         }
     }
 }
